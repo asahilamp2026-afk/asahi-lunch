@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#315b43">
+<title>Asahi Lamp｜訂餐系統 V6</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f4f1ea; --paper:#fff; --ink:#1f2a1f; --muted:#6b7369;
+  --green:#2f5a40; --green-soft:#e6f0e8; --line:#e5e1d8;
+  --orange:#d97843; --warn:#8a6d2b; --danger:#b33a3a;
+  --shadow:0 10px 30px rgba(30,40,30,.08); --radius:18px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC",sans-serif;-webkit-tap-highlight-color:transparent}
+button,input,textarea,select{font:inherit}button{cursor:pointer}
+.app{max-width:1100px;margin:0 auto;min-height:100vh;padding:0 16px 110px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 0 14px;gap:10px;position:sticky;top:0;z-index:8;background:linear-gradient(var(--bg) 70%,transparent)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{height:40px;width:40px;display:grid;place-items:center;background:var(--green);color:#fff;border-radius:13px;font-size:20px;flex-shrink:0}
+.brand h1{font-size:16px;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:11px}
+.user-chip{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 10px 6px 6px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:var(--green-soft);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--green)}
+.user-name{font-size:12px;font-weight:650;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.role-switch{display:flex;background:#e8e5dc;border-radius:12px;padding:3px;gap:2px}
+.role-switch button{border:0;background:transparent;color:var(--muted);padding:8px 10px;border-radius:9px;font-size:12px}
+.role-switch button.active{background:#fff;color:var(--green);box-shadow:0 2px 8px rgba(0,0,0,.06);font-weight:700}
+.hero{background:linear-gradient(145deg,#2f5a40,#3d6e4f);color:#fff;border-radius:22px;padding:22px 20px;margin:6px 0 18px;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;width:160px;height:160px;border:1px solid rgba(255,255,255,.15);border-radius:50%;right:-28px;top:-70px;box-shadow:0 0 0 22px rgba(255,255,255,.05)}
+.eyebrow{font-size:11px;letter-spacing:.14em;opacity:.8}
+.hero h2{font-size:24px;line-height:1.35;margin:8px 0 6px;max-width:640px}
+.hero p{margin:0;color:#dce8df;font-size:13px;line-height:1.65}
+.hero-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+.pill{font-size:11px;padding:6px 9px;border-radius:99px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18)}
+.status-open{display:inline-flex;align-items:center;gap:6px;background:#e5f3d9;color:#2f5a37;border:1px solid #cfe6c4;font-weight:700}
+.status-open:before{content:"";width:7px;height:7px;border-radius:50%;background:#4d8c4d;box-shadow:0 0 0 3px rgba(77,140,77,.2)}
+.status-closed{background:#f8e8e5;color:#8a3b2f;border-color:#efcfc8;font-weight:700}
+.section-head{display:flex;align-items:end;justify-content:space-between;margin:20px 0 12px;gap:10px}
+.section-head h3{margin:0;font-size:17px}
+.section-head p{margin:4px 0 0;color:var(--muted);font-size:12px}
+.subtle{color:var(--muted);font-size:12px}
+.menu-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.food-card{background:var(--paper);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);min-width:0;position:relative;transition:transform .15s ease}
+.food-card:active{transform:scale(.98)}
+.food-art{height:130px;display:grid;place-items:center;font-size:52px;background:linear-gradient(135deg,#f5e4cf,#f0d6b7);position:relative}
+.food-card:nth-child(2n) .food-art{background:linear-gradient(135deg,#e9e0cf,#d4c6a9)}
+.food-card:nth-child(3n) .food-art{background:linear-gradient(135deg,#dce9d8,#b9d0b4)}
+.star-btn{position:absolute;right:8px;top:8px;width:32px;height:32px;border:0;border-radius:50%;background:rgba(255,255,255,.9);font-size:16px;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.08);z-index:2}
+.star-btn.on{color:#e6a817}
+.food-info{padding:12px}
+.food-title{font-weight:750;font-size:14px;margin:0 0 4px}
+.food-desc{font-size:11px;color:var(--muted);margin:0;line-height:1.5;min-height:20px}
+.food-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}
+.price{font-weight:800;color:var(--green);font-size:15px}
+.price small{font-size:10px;font-weight:500;color:var(--muted)}
+.qty{display:flex;align-items:center;gap:8px}
+.qty button{height:30px;width:30px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--green);font-size:18px;line-height:1}
+.qty span{min-width:14px;text-align:center;font-weight:700;font-size:14px}
+.bottom-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;z-index:6;width:calc(100% - 28px);max-width:1070px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 12px 36px rgba(20,30,20,.16)}
+.total-label{font-size:11px;color:var(--muted)}
+.total-price{font-size:20px;font-weight:800;color:var(--green);margin-top:1px}
+.primary{border:0;background:var(--green);color:#fff;padding:12px 16px;border-radius:11px;font-weight:700}
+.primary:disabled{opacity:.4;cursor:not-allowed}
+.secondary{border:1px solid var(--line);background:#fff;color:var(--green);padding:9px 12px;border-radius:10px;font-weight:650}
+.danger-btn{border:1px solid #f0c8c8;background:#fff5f5;color:var(--danger);padding:9px 12px;border-radius:10px;font-weight:650}
+.notice{border-radius:12px;background:#fff8e9;color:var(--warn);padding:11px 13px;font-size:12px;line-height:1.6;margin-top:14px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:12px 0;box-shadow:var(--shadow)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat{background:#f7f6f1;border-radius:12px;padding:12px}
+.stat span{display:block;color:var(--muted);font-size:11px}
+.stat strong{display:block;font-size:20px;margin-top:5px;color:var(--green)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
+.field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff;outline-color:var(--green)}
+.field.full{grid-column:1/-1}
+.empty{text-align:center;padding:28px 12px;color:var(--muted)}
+.empty span{font-size:32px;display:block;margin-bottom:6px}
+.footer{text-align:center;color:#92968e;font-size:11px;margin:24px 0 0}
+.toast{position:fixed;left:50%;bottom:90px;transform:translate(-50%,20px);background:#24362a;color:#fff;border-radius:12px;padding:11px 16px;font-size:13px;opacity:0;pointer-events:none;transition:.2s;z-index:30;box-shadow:var(--shadow);max-width:calc(100% - 30px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.hidden{display:none!important}
+.modal-backdrop{position:fixed;inset:0;background:rgba(18,28,20,.55);display:grid;place-items:center;padding:16px;z-index:20;backdrop-filter:blur(3px)}
+.modal{background:#fff;border-radius:18px;padding:20px;max-width:520px;width:100%;box-shadow:0 22px 60px rgba(0,0,0,.18);max-height:90vh;overflow:auto}
+.modal h3{margin:0 0 6px;font-size:18px}
+.modal p{font-size:13px;color:var(--muted);line-height:1.6;margin:0 0 12px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.closed-box{text-align:center;padding:48px 16px;background:#fff;border:1px dashed var(--line);border-radius:18px;margin:18px 0}
+.closed-box .big{font-size:42px;margin-bottom:10px}
+.closed-box h3{margin:0 0 6px}
+.chart-wrap{position:relative;height:220px;margin-top:6px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font-size:12px;color:var(--muted)}
+.tabs button.active{background:var(--green);color:#fff;border-color:var(--green);font-weight:700}
+.perm-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.perm-row:last-child{border-bottom:0}
+.fav-chips{display:flex;flex-wrap:wrap;gap:6px}
+.fav-chip{display:inline-flex;align-items:center;gap:4px;background:var(--green-soft);color:var(--green);border-radius:999px;padding:5px 10px;font-size:12px;font-weight:650;border:1px solid #cfe0d2}
+.detail-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.detail-row input{flex:1;min-width:100px}
+.loading-mask{position:fixed;inset:0;background:rgba(244,241,234,.85);display:grid;place-items:center;z-index:40;font-size:14px;color:var(--muted)}
+.active-menu-bar{background:#e8f5e9;border:1px solid #c8e6c9;border-radius:14px;padding:14px 16px;margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.active-menu-bar .countdown{font-size:15px;font-weight:700;color:var(--green)}
+.active-menu-bar .meta{font-size:12px;color:var(--muted)}
+.search-sort-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.search-sort-bar input{flex:1;min-width:160px;border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.order-table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+.order-table{width:100%;border-collapse:collapse;font-size:13px}
+.order-table th,.order-table td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.order-table th{background:#f7f6f1;font-weight:700;cursor:pointer;user-select:none;position:sticky;top:0}
+.order-table th:hover{background:#efece3}
+.order-table th .sort-ind{margin-left:4px;opacity:.5;font-size:10px}
+.order-table tr:last-child td{border-bottom:0}
+.order-table tbody tr:hover{background:#fafaf7}
+.role-select{border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:#fff;min-width:110px}
+.menu-group-card{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px;background:#fff;cursor:pointer;transition:box-shadow .15s}
+.menu-group-card:hover{box-shadow:0 6px 20px rgba(30,40,30,.08)}
+.menu-group-card .title{font-weight:700;font-size:15px;margin:0 0 4px}
+.menu-group-card .meta{font-size:12px;color:var(--muted)}
+.menu-group-card .stats-line{margin-top:8px;font-size:13px;font-weight:650;color:var(--green)}
+.already-ordered{background:#e8f5e9;border:1px solid #c8e6c9;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#2f5a37}
+@media(max-width:760px){
+  .menu-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .food-art{height:112px;font-size:46px}
+  .form-grid{grid-template-columns:1fr}
+  .field.full{grid-column:auto}
+  .hero h2{font-size:21px}
+  .stats{gap:6px}
+  .stat strong{font-size:17px}
+  .chart-wrap{height:200px}
+  .order-table{font-size:12px}
+  .order-table th,.order-table td{padding:8px 8px}
+}
+@media(max-width:380px){
+  .role-switch button{padding:7px 7px;font-size:11px}
+  .user-name{max-width:60px}
+}
+
+.role-switch button{font-size:18px;padding:8px 14px;min-width:44px}
+.food-card .food-info{padding:14px}
+
+.hero.hero-closed{
+  background:linear-gradient(145deg,#6b7369,#8a8f86);
+  color:#fff;
+}
+.hero.hero-closed p{color:#e4e6e2}
+.hero.hero-closed:after{border-color:rgba(255,255,255,.12);box-shadow:0 0 0 22px rgba(255,255,255,.04)}
+
+</style>
+</head>
+<body>
+<div id="loadingMask" class="loading-mask">連線 Google Sheet 中…</div>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">🍱</div>
+      <div>
+        <h1>訂餐系統</h1>
+        <p>Asahi Lamp · V6</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="user-chip" id="userChip" style="display:none">
+        <div class="user-avatar" id="userAvatar">?</div>
+      </div>
+      <div class="role-switch" aria-label="切換畫面">
+        <button id="employeeTab" class="active" onclick="trySetView('employee')" title="我要訂餐">🛒</button>
+        <button id="adminTab" onclick="trySetView('admin')" title="管理者">📋</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="employeeView">
+    <section class="hero">
+      <div class="eyebrow">Are you hungry?</div>
+      <h2 id="heroTitle">今天想吃點什麼？</h2>
+      <p id="heroDesc">挑選喜歡的便當，確認數量後送出。</p>
+      <div class="hero-meta">
+        <span class="pill" id="statusPill">—</span>
+        <span class="pill" id="menuIndxPill"># —</span>
+        <span class="pill" id="deadlinePill">⏰ —</span>
+      </div>
+    </section>
+
+    <div id="closedState" class="closed-box hidden">
+      <div class="big">🔒</div>
+      <h3>尚未開始訂餐</h3>
+      <p class="subtle">管理員還沒有開立今日菜單，或已超過截止時間。</p>
+    </div>
+
+    <div id="openState">
+      <div id="alreadyOrderedBox" class="already-ordered hidden">
+        你已訂過此菜單，可修改數量後再次送出（會覆蓋原訂單，不會重複）。
+      </div>
+      <div id="favSection" style="display:none;margin-bottom:8px">
+        <div class="section-head" style="margin-top:0">
+          <div><h3>⭐ 常用</h3><p>點星號加入（僅此裝置記住）</p></div>
+        </div>
+        <div class="fav-chips" id="favChips"></div>
+      </div>
+      <div class="section-head">
+        <div><h3>今日菜單</h3></div>
+        <span class="subtle" id="menuCount"></span>
+      </div>
+      <section class="menu-grid" id="menuGrid"></section>
+    </div>
+
+    <div class="bottom-bar" id="bottomBar">
+      <div>
+        <div class="total-label">已選 <strong id="totalQty">0</strong> 個</div>
+        <div class="total-price" id="totalPrice">$0</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="danger-btn hidden" id="cancelOrderBtn" onclick="cancelOrder()">取消訂餐</button>
+        <button class="primary" id="submitOrder" onclick="confirmOrder()" disabled>確認送出 →</button>
+      </div>
+    </div>
+  </main>
+
+  <main id="adminView" class="hidden">
+    <div id="activeMenuBar" class="active-menu-bar hidden">
+      <div>
+        <div class="countdown" id="countdownText">—</div>
+        <div class="meta" id="activeMenuMeta">目前無開放菜單</div>
+      </div>
+      <button class="danger-btn" id="btnCloseMenu" onclick="closeActiveMenu()">取消</button>
+    </div>
+
+    <section class="panel">
+      <div class="section-head" style="margin-top:0">
+        <div><h3>近 7 日訂餐</h3><p>依 Order.CrearDate</p></div>
+      </div>
+      <div class="chart-wrap"><canvas id="weekChart"></canvas></div>
+    </section>
+
+    <div class="stats">
+      <div class="stat"><span>今日訂單</span><strong id="statOrders">0</strong></div>
+      <div class="stat"><span>今日數量</span><strong id="statMeals">0</strong></div>
+      <div class="stat"><span>今日金額</span><strong id="statAmount">$0</strong></div>
+    </div>
+
+    <div class="tabs" id="adminTabs">
+      <button class="active" data-tab="openOrder" onclick="switchAdminTab('openOrder')">開立新菜單</button>
+      <button data-tab="history" onclick="switchAdminTab('history')">過去訂單</button>
+      <button data-tab="dev" id="devTabBtn" onclick="switchAdminTab('dev')">設定 / 權限</button>
+    </div>
+
+    <section class="panel admin-tab" id="tab-openOrder">
+      <div class="section-head" style="margin-top:0">
+        <div><h3>開立 Menu</h3><p>一次僅能開立一張</p></div>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>截止時間（至少 10 分鐘）</label>
+          <input type="datetime-local" id="deadlineInput">
+        </div>
+        <div class="field">
+          <label>訂購店名（選填）</label>
+          <input id="storeInput" placeholder="例如：巷口便當、XX食堂">
+        </div>
+        <div class="field full">
+          <label>匯入最愛菜單</label>
+          <select id="favMenuSelect" onchange="loadFavoriteMenu()">
+            <option value="">— 不載入 —</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>菜單品項 MenuDetail（Info + Price）</label>
+          <div id="detailEditor"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <button class="secondary" onclick="addDetailRow()">＋ ADD</button>
+            <button class="secondary" onclick="saveAsFavorite()">⭐ 存成最愛</button>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap">
+        <button class="primary" id="btnOpenMenu" onclick="openNewMenu()">開立</button>
+      </div>
+    </section>
+
+    <section class="panel admin-tab hidden" id="tab-history">
+      <div class="section-head" style="margin-top:0">
+        <div><h3>過去訂單</h3><p>依 Menu 編號分類 · 點選後查看詳細表格（可搜尋／排序）</p></div>
+        <button class="secondary" onclick="exportCSV()">匯出全部 CSV</button>
+      </div>
+      <div id="historyList"></div>
+      <div id="historyEmpty" class="empty hidden"><span>🧾</span>尚無訂單</div>
+    </section>
+
+    <section class="panel admin-tab hidden" id="tab-dev">
+      <div class="section-head" style="margin-top:0">
+        <div><h3>GAS 連線</h3></div>
+      </div>
+      <div class="field">
+        <label>GAS Web App URL（/exec）</label>
+        <input id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="primary" onclick="saveGasUrlAndReload()">儲存並重新連線</button>
+        <button class="secondary" onclick="reloadFromServer()">重新載入資料</button>
+      </div>
+      <div class="notice" style="margin-top:12px" id="connStatus">尚未連線</div>
+
+      <div id="permSection">
+        <hr style="border:none;border-top:1px solid var(--line);margin:18px 0">
+        <div class="section-head" style="margin-top:0">
+          <div><h3>權限等級</h3><p>Regular / Admin / Developer</p></div>
+        </div>
+        <div id="permList"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="footer">System Developed In VS Code By Samuel @ 2026 • V6</div>
+</div>
+
+<div id="setupBackdrop" class="modal-backdrop hidden" role="dialog">
+  <div class="modal">
+    <h3>設定 Google Sheet 連線</h3>
+    <p>請貼上 Apps Script 部署後的 Web App 網址（結尾為 /exec）。</p>
+    <div class="field">
+      <label>GAS URL</label>
+      <input id="setupGasUrl" placeholder="https://script.google.com/macros/s/.../exec">
+    </div>
+    <div class="modal-actions">
+      <button class="primary" onclick="saveSetupUrl()">連線</button>
+    </div>
+  </div>
+</div>
+
+<div id="welcomeBackdrop" class="modal-backdrop hidden" role="dialog">
+  <div class="modal">
+    <h3>👋 歡迎使用</h3>
+    <p>請輸入姓名，將寫入 User 表（Name / Cookie / Role）。</p>
+    <div class="field">
+      <label>姓名 Name</label>
+      <input id="welcomeName" placeholder="請輸入姓名" maxlength="40">
+    </div>
+    <div class="modal-actions">
+      <button class="primary" onclick="registerUser()">開始使用</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalBackdrop" class="modal-backdrop hidden" role="dialog">
+  <div class="modal">
+    <h3 id="modalTitle">確認訂單</h3>
+    <p id="modalText"></p>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeModal()">再檢查</button>
+      <button class="primary" id="btnSaveOrder" onclick="saveOrder()">送出到 Sheet</button>
+    </div>
+  </div>
+</div>
+
+<div id="noPermBackdrop" class="modal-backdrop hidden" role="dialog">
+  <div class="modal">
+    <h3>無權限</h3>
+    <p>Your role is Regular. Admin access is not allowed.<br>Please contact a Developer.</p>
+    <div class="modal-actions">
+      <button class="primary" onclick="closeNoPerm()">知道了</button>
+    </div>
+  </div>
+</div>
+
+<div id="historyDetailBackdrop" class="modal-backdrop hidden" role="dialog">
+  <div class="modal" style="max-width:720px">
+    <h3 id="historyDetailTitle">訂單詳細</h3>
+    <p id="historyDetailMeta" class="subtle" style="margin-bottom:8px"></p>
+    <div id="historyStats" class="notice" style="margin:0 0 12px;background:#e8f5e9;color:#2f5a37"></div>
+    <div class="search-sort-bar">
+      <input type="search" id="detailOrderSearch" placeholder="搜尋姓名、品項…" oninput="renderDetailTable()">
+    </div>
+    <div class="order-table-wrap">
+      <table class="order-table">
+        <thead>
+          <tr>
+            <th data-key="CrearDate" onclick="sortDetail('CrearDate')">時間 <span class="sort-ind" id="dsort-CrearDate">▼</span></th>
+            <th data-key="Name" onclick="sortDetail('Name')">訂餐人 <span class="sort-ind" id="dsort-Name"></span></th>
+            <th data-key="Info" onclick="sortDetail('Info')">品項 <span class="sort-ind" id="dsort-Info"></span></th>
+            <th data-key="Pcs" onclick="sortDetail('Pcs')">數量 <span class="sort-ind" id="dsort-Pcs"></span></th>
+            <th data-key="TotalPrice" onclick="sortDetail('TotalPrice')">金額 <span class="sort-ind" id="dsort-TotalPrice"></span></th>
+          </tr>
+        </thead>
+        <tbody id="detailTableBody"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeHistoryDetail()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- 最愛名稱 -->
+<div id="favNameBackdrop" class="modal-backdrop hidden" role="dialog">
+  <div class="modal">
+    <h3>存成最愛</h3>
+    <p>為此組品項取一個名稱，方便之後載入。</p>
+    <div class="field">
+      <label>最愛名稱</label>
+      <input id="favNameInput" placeholder="例如：平日午休套餐" maxlength="40">
+    </div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeFavNameModal()">取消</button>
+      <button class="primary" onclick="confirmSaveFavorite()">確認儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* =========================================================
+   Asahi_Lamp_Order v5 — Favorite 獨立表
+   User        | indx | Name | Cookie | Role
+   Menu        | indx | DeadTime | Creater | CreateDate   （無 star）
+   MenuDetail  | indx | Info | Price
+   Order       | indx | Name | Info | TotalPrice | Pcs | CrearDate
+   Favorite    | indx | Info | Price   ← indx = 一組最愛的流水號
+   ========================================================= */
+
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzrt-Tn-bx-JxTXhNUQJNyV3UZSYD-awpHgwuwIHZKn6pww4sVsBtahFqQijWxxXMYvoA/exec';
+
+const COOKIE_KEY = 'asahi_lamp_cookie';
+const GAS_URL_KEY = 'asahi_gas_url';
+const FAV_KEY = 'asahi_fav_only';
+
+let GAS_URL = localStorage.getItem(GAS_URL_KEY) || DEFAULT_GAS_URL;
+
+let currentUser = null;
+let users = [];
+let menus = [];
+let details = [];
+let orders = [];
+let favorites = [];
+let activeMenu = null;
+let cart = {};
+let weekChart = null;
+let countdownTimer = null;
+let existingOrder = null;
+
+let detailSortKey = 'CrearDate';
+let detailSortDir = 'desc';
+let detailOrdersCache = [];
+
+function rid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function money(n) { return '$' + Number(n || 0).toLocaleString('zh-TW'); }
+function dateKey(d = new Date()) {
+  const x = new Date(d);
+  return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+}
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), 2800);
+}
+function getCookie(name) {
+  const m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : '';
+}
+function setCookie(name, value, days = 400) {
+  const d = new Date();
+  d.setTime(d.getTime() + days * 864e5);
+  document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + d.toUTCString() + ';path=/;SameSite=Lax';
+}
+function toLocalInput(date) {
+  const d = new Date(date);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+function parseDead(v) {
+  if (!v) return null;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+function setLoading(on, text) {
+  const el = document.getElementById('loadingMask');
+  if (on) {
+    el.textContent = text || '連線 Google Sheet 中…';
+    el.classList.remove('hidden');
+  } else {
+    el.classList.add('hidden');
+  }
+}
+function setConnStatus(ok, msg) {
+  const el = document.getElementById('connStatus');
+  if (!el) return;
+  el.style.background = ok ? '#e5f3d9' : '#fff8e9';
+  el.style.color = ok ? '#2f5a37' : '#8a6d2b';
+  el.textContent = msg;
+}
+function isPrivileged(role) {
+  const r = String(role || '').toLowerCase();
+  return r === 'admin' || r === 'developer';
+}
+function isDeveloper(role) {
+  return String(role || '').toLowerCase() === 'developer';
+}
+function roleLabel(role) {
+  const r = String(role || '').toLowerCase();
+  if (r === 'developer') return 'Developer';
+  if (r === 'admin') return 'Admin';
+  return 'Regular';
+}
+function parseOrderInfo(infoStr) {
+  const c = {};
+  if (!infoStr) return c;
+  String(infoStr).split('、').forEach(part => {
+    const m = part.trim().match(/^(.+)×(\d+)$/);
+    if (m) c[m[1]] = parseInt(m[2], 10) || 0;
+  });
+  return c;
+}
+
+async function gasGet(action, params = {}) {
+  if (!GAS_URL) throw new Error('尚未設定 GAS URL');
+  const q = new URLSearchParams({ action, ...params });
+  const res = await fetch(GAS_URL + '?' + q.toString());
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'GAS 回傳失敗');
+  return data;
+}
+async function gasPost(body) {
+  if (!GAS_URL) throw new Error('尚未設定 GAS URL');
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'GAS 回傳失敗');
+  return data;
+}
+
+async function loadFromServer() {
+  const data = await gasGet('bootstrap');
+  users = data.users || [];
+  menus = data.menus || [];
+  details = data.details || [];
+  orders = data.orders || [];
+  favorites = data.favorites || [];
+  menus.forEach(m => { m.indx = String(m.indx); });
+  details.forEach(d => { d.indx = String(d.indx); d.Price = Number(d.Price); });
+  orders.forEach(o => {
+    o.indx = String(o.indx);
+    o.TotalPrice = Number(o.TotalPrice);
+    o.Pcs = Number(o.Pcs);
+  });
+  favorites.forEach(f => {
+    f.indx = String(f.indx);
+    f.Price = Number(f.Price);
+  });
+  users.forEach(u => {
+    u.indx = String(u.indx);
+    u.Role = String(u.Role || 'user').toLowerCase();
+  });
+}
+
+function resolveActiveMenu() {
+  if (!menus.length) { activeMenu = null; return; }
+  const sorted = menus.slice().sort((a, b) => {
+    return new Date(b.CreateDate || 0).getTime() - new Date(a.CreateDate || 0).getTime();
+  });
+  for (const m of sorted) {
+    const dead = parseDead(m.DeadTime);
+    if (!dead || dead.getTime() > Date.now()) {
+      activeMenu = m;
+      return;
+    }
+  }
+  activeMenu = null;
+}
+function activeDetails() {
+  if (!activeMenu) return [];
+  const id = String(activeMenu.indx);
+  return details.filter(d => String(d.indx) === id);
+}
+function isMenuOpen() {
+  return !!activeMenu && activeDetails().length > 0;
+}
+
+async function boot() {
+  document.getElementById('gasUrlInput').value = GAS_URL;
+
+  if (!GAS_URL) {
+    setLoading(false);
+    document.getElementById('setupBackdrop').classList.remove('hidden');
+    return;
+  }
+
+  setLoading(true, '連線 Google Sheet 中…');
+  try {
+    await loadFromServer();
+    setConnStatus(true, '已連線：' + GAS_URL.slice(0, 48) + '…');
+  } catch (e) {
+    console.error(e);
+    setLoading(false);
+    setConnStatus(false, '連線失敗：' + e.message);
+    toast('連線失敗：' + e.message);
+    document.getElementById('setupBackdrop').classList.remove('hidden');
+    document.getElementById('setupGasUrl').value = GAS_URL;
+    return;
+  }
+  setLoading(false);
+  resolveActiveMenu();
+
+  const cookie = getCookie(COOKIE_KEY);
+  const found = users.find(u => String(u.Cookie) === String(cookie));
+  if (!cookie || !found) {
+    document.getElementById('welcomeBackdrop').classList.remove('hidden');
+    document.getElementById('welcomeName').focus();
+    return;
+  }
+  currentUser = found;
+  afterLogin();
+}
+
+function saveSetupUrl() {
+  const url = document.getElementById('setupGasUrl').value.trim();
+  if (!url || !url.includes('script.google.com')) {
+    toast('請貼上正確的 GAS /exec 網址');
+    return;
+  }
+  GAS_URL = url;
+  localStorage.setItem(GAS_URL_KEY, GAS_URL);
+  document.getElementById('setupBackdrop').classList.add('hidden');
+  boot();
+}
+
+function saveGasUrlAndReload() {
+  const url = document.getElementById('gasUrlInput').value.trim();
+  if (!url) { toast('請輸入 URL'); return; }
+  GAS_URL = url;
+  localStorage.setItem(GAS_URL_KEY, GAS_URL);
+  toast('已儲存，重新連線…');
+  boot();
+}
+
+async function reloadFromServer() {
+  setLoading(true, '重新載入…');
+  try {
+    await loadFromServer();
+    resolveActiveMenu();
+    if (currentUser) {
+      const u = users.find(x => x.Cookie === currentUser.Cookie);
+      if (u) currentUser = u;
+      renderEmployee();
+      if (!document.getElementById('adminView').classList.contains('hidden')) renderAdmin();
+    }
+    setConnStatus(true, '已重新載入 ' + new Date().toLocaleTimeString('zh-TW'));
+    toast('已重新載入');
+  } catch (e) {
+    toast('載入失敗：' + e.message);
+    setConnStatus(false, '載入失敗：' + e.message);
+  }
+  setLoading(false);
+}
+
+async function registerUser() {
+  const name = document.getElementById('welcomeName').value.trim();
+  if (!name) { toast('請輸入姓名'); return; }
+  const cookieVal = 'c_' + rid();
+  const newUser = {
+    indx: String((users.length || 0) + 1),
+    Name: name,
+    Cookie: cookieVal,
+    Role: users.length === 0 ? 'developer' : 'user'
+  };
+  setLoading(true, '註冊中…');
+  try {
+    const res = await gasPost({ action: 'registerUser', user: newUser });
+    currentUser = res.user || newUser;
+    await loadFromServer();
+    const u = users.find(x => x.Cookie === currentUser.Cookie);
+    if (u) currentUser = u;
+  } catch (e) {
+    setLoading(false);
+    toast('註冊失敗：' + e.message);
+    return;
+  }
+  setLoading(false);
+  setCookie(COOKIE_KEY, currentUser.Cookie);
+  document.getElementById('welcomeBackdrop').classList.add('hidden');
+  afterLogin();
+  toast(currentUser.Role === 'developer' ? 'Welcome, you are set as Developer' : '歡迎，' + name);
+}
+
+function afterLogin() {
+  document.getElementById('userChip').style.display = 'flex';
+  document.getElementById('userAvatar').textContent = (currentUser.Name || '?').slice(0, 1);
+  renderEmployee();
+  setView('employee');
+}
+
+function trySetView(view) {
+  if (view === 'admin') {
+    if (!currentUser || !isPrivileged(currentUser.Role)) {
+      document.getElementById('noPermBackdrop').classList.remove('hidden');
+      return;
+    }
+  }
+  setView(view);
+}
+function setView(view) {
+  document.getElementById('employeeView').classList.toggle('hidden', view !== 'employee');
+  document.getElementById('adminView').classList.toggle('hidden', view !== 'admin');
+  document.getElementById('employeeTab').classList.toggle('active', view === 'employee');
+  document.getElementById('adminTab').classList.toggle('active', view === 'admin');
+  document.getElementById('bottomBar').style.display = view === 'employee' ? 'flex' : 'none';
+  if (view === 'admin') renderAdmin();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function closeNoPerm() { document.getElementById('noPermBackdrop').classList.add('hidden'); }
+
+function findExistingOrder() {
+  if (!currentUser || !activeMenu) return null;
+  return orders.find(o =>
+    String(o.Name) === String(currentUser.Name) &&
+    String(o.indx) === String(activeMenu.indx)
+  ) || null;
+}
+
+function renderEmployee() {
+  resolveActiveMenu();
+  const open = isMenuOpen();
+  document.getElementById('openState').classList.toggle('hidden', !open);
+  document.getElementById('closedState').classList.toggle('hidden', open);
+  document.getElementById('bottomBar').style.display = open ? 'flex' : 'none';
+
+  const status = document.getElementById('statusPill');
+  const hero = document.querySelector('#employeeView .hero');
+  if (hero) hero.classList.toggle('hero-closed', !open);
+  if (open) {
+    status.className = 'pill status-open';
+    status.textContent = '訂餐開放中';
+    document.getElementById('heroTitle').textContent = '今天中午，想吃點什麼？';
+    document.getElementById('heroDesc').textContent = '挑選喜歡的便當，確認數量後送出。';
+  } else {
+    status.className = 'pill status-closed';
+    status.textContent = '訂餐已關閉';
+    document.getElementById('heroTitle').textContent = '目前無法訂餐';
+    document.getElementById('heroDesc').textContent = '尚未開立菜單，或已超過截止時間。';
+  }
+
+  // 權限等級 pill（訂餐頁）
+  let rolePill = document.getElementById('rolePill');
+  if (!rolePill) {
+    rolePill = document.createElement('span');
+    rolePill.className = 'pill';
+    rolePill.id = 'rolePill';
+    document.querySelector('.hero-meta').appendChild(rolePill);
+  }
+  rolePill.textContent = '👤 ' + roleLabel(currentUser?.Role);
+
+  if (activeMenu) {
+    // 有菜單：Store（空白則顯示 indx）+ 截止時間
+    const dead = parseDead(activeMenu.DeadTime);
+    document.getElementById('deadlinePill').textContent = dead
+      ? '⏰ ' + dead.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : '⏰ 未設定';
+    const storeTxt = (activeMenu.Store && String(activeMenu.Store).trim())
+      ? String(activeMenu.Store).trim()
+      : ('#' + activeMenu.indx);
+    document.getElementById('menuIndxPill').textContent = '🏪 ' + storeTxt;
+    document.getElementById('menuIndxPill').style.display = '';
+    document.getElementById('deadlinePill').style.display = '';
+  } else {
+    // 無菜單：顯示現在時間
+    const now = new Date();
+    document.getElementById('deadlinePill').textContent =
+      '🕐 ' + now.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    document.getElementById('deadlinePill').style.display = '';
+    document.getElementById('menuIndxPill').textContent = '';
+    document.getElementById('menuIndxPill').style.display = 'none';
+    const storePill = document.getElementById('storePill');
+    if (storePill) storePill.style.display = 'none';
+  }
+
+  existingOrder = null;
+  cart = {};
+  if (open) {
+    existingOrder = findExistingOrder();
+    const box = document.getElementById('alreadyOrderedBox');
+    if (existingOrder) {
+      cart = parseOrderInfo(existingOrder.Info);
+      box.classList.remove('hidden');
+      document.getElementById('submitOrder').textContent = '修改訂單 →';
+      document.getElementById('cancelOrderBtn').classList.remove('hidden');
+    } else {
+      box.classList.add('hidden');
+      document.getElementById('submitOrder').textContent = '確認送出 →';
+      document.getElementById('cancelOrderBtn').classList.add('hidden');
+    }
+    renderFavorites();
+    renderMenu();
+  }
+}
+
+function getFavs() {
+  try {
+    const all = JSON.parse(localStorage.getItem(FAV_KEY) || '{}');
+    return all[currentUser?.Cookie] || [];
+  } catch { return []; }
+}
+function toggleFav(info) {
+  if (!currentUser) return;
+  let all = {};
+  try { all = JSON.parse(localStorage.getItem(FAV_KEY) || '{}'); } catch {}
+  const list = (all[currentUser.Cookie] || []).slice();
+  const i = list.indexOf(info);
+  if (i >= 0) list.splice(i, 1); else list.push(info);
+  all[currentUser.Cookie] = list;
+  localStorage.setItem(FAV_KEY, JSON.stringify(all));
+  renderMenu();
+  renderFavorites();
+}
+function renderFavorites() {
+  const favs = getFavs();
+  const items = activeDetails().filter(d => favs.includes(d.Info));
+  const sec = document.getElementById('favSection');
+  if (!items.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  document.getElementById('favChips').innerHTML = items.map(d =>
+    `<span class="fav-chip" onclick="changeQty('${esc(d.Info)}',1)">${esc(d.Info)}</span>`
+  ).join('');
+}
+
+function renderMenu() {
+  const grid = document.getElementById('menuGrid');
+  const items = activeDetails();
+  const favs = getFavs();
+  document.getElementById('menuCount').textContent = items.length + ' 種';
+  grid.innerHTML = '';
+  items.forEach((item) => {
+    const q = cart[item.Info] || 0;
+    const on = favs.includes(item.Info);
+    const card = document.createElement('article');
+    card.className = 'food-card';
+    card.innerHTML = `
+      <div class="food-info" style="position:relative;padding-top:14px">
+        <button class="star-btn ${on ? 'on' : ''}" style="position:absolute;right:8px;top:8px" onclick="toggleFav('${esc(item.Info)}')">${on ? '★' : '☆'}</button>
+        <h4 class="food-title" style="padding-right:36px">${esc(item.Info)}</h4>
+        <p class="food-desc">Menu #${esc(item.indx)}</p>
+        <div class="food-bottom">
+          <div class="price">${money(item.Price)} <small>/ 份</small></div>
+          <div class="qty">
+            <button onclick="changeQty('${esc(item.Info)}',-1)">−</button>
+            <span>${q}</span>
+            <button onclick="changeQty('${esc(item.Info)}',1)">＋</button>
+          </div>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+  updateCart();
+}
+function changeQty(info, delta) {
+  cart[info] = Math.max(0, Math.min(99, (cart[info] || 0) + delta));
+  renderMenu();
+}
+function cartStats() {
+  let qty = 0, total = 0;
+  const map = {};
+  activeDetails().forEach(d => { map[d.Info] = Number(d.Price); });
+  Object.keys(cart).forEach(info => {
+    const q = cart[info] || 0;
+    qty += q;
+    total += q * (map[info] || 0);
+  });
+  return { qty, total };
+}
+function updateCart() {
+  const s = cartStats();
+  document.getElementById('totalQty').textContent = s.qty;
+  document.getElementById('totalPrice').textContent = money(s.total);
+  document.getElementById('submitOrder').disabled = s.qty === 0 || !isMenuOpen();
+}
+
+function confirmOrder() {
+  if (!isMenuOpen()) { toast('目前未開放'); return; }
+  const s = cartStats();
+  if (!s.qty) return;
+  const parts = Object.keys(cart).filter(k => cart[k] > 0).map(k => `${k}×${cart[k]}`);
+  const isUpdate = !!existingOrder;
+  document.getElementById('modalTitle').textContent = isUpdate ? '確認修改訂單' : '確認訂單';
+  document.getElementById('modalText').textContent =
+    `${currentUser.Name}，你${isUpdate ? '修改後' : '點了'} ${parts.join('、')}，共 ${s.qty} 個，${money(s.total)}。確認${isUpdate ? '更新' : '送出'}？`;
+  document.getElementById('btnSaveOrder').textContent = isUpdate ? '確認更新' : '送出到 Sheet';
+  document.getElementById('modalBackdrop').classList.remove('hidden');
+}
+function closeModal() { document.getElementById('modalBackdrop').classList.add('hidden'); }
+
+async function saveOrder() {
+  if (!currentUser || !activeMenu) return;
+  const s = cartStats();
+  const parts = Object.keys(cart).filter(k => cart[k] > 0).map(k => `${k}×${cart[k]}`);
+  const row = {
+    indx: String(activeMenu.indx),
+    Name: currentUser.Name,
+    Info: parts.join('、'),
+    TotalPrice: s.total,
+    Pcs: s.qty,
+    CrearDate: new Date().toISOString()
+  };
+  document.getElementById('btnSaveOrder').disabled = true;
+  setLoading(true, existingOrder ? '更新 Order…' : '寫入 Order…');
+  try {
+    const res = await gasPost({ action: 'saveOrder', order: row });
+    await loadFromServer();
+    closeModal();
+    renderEmployee();
+    toast(res.updated ? '訂單已更新' : '訂單已送出');
+  } catch (e) {
+    toast('送出失敗：' + e.message);
+  }
+  document.getElementById('btnSaveOrder').disabled = false;
+  setLoading(false);
+}
+
+async function cancelOrder() {
+  if (!currentUser || !activeMenu || !existingOrder) {
+    toast('目前沒有可取消的訂單');
+    return;
+  }
+  if (!confirm('確定取消此菜單的訂餐？將刪除你在此菜單的訂單資料。')) return;
+  setLoading(true, '取消訂餐中…');
+  try {
+    await gasPost({
+      action: 'deleteOrder',
+      indx: String(activeMenu.indx),
+      name: currentUser.Name
+    });
+    await loadFromServer();
+    cart = {};
+    existingOrder = null;
+    renderEmployee();
+    toast('已取消訂餐');
+  } catch (e) {
+    toast('取消失敗：' + e.message);
+  }
+  setLoading(false);
+}
+
+function switchAdminTab(tab) {
+  if (tab === 'dev' && !isDeveloper(currentUser?.Role)) {
+    toast('僅 Developer 可進入設定 / 權限');
+    tab = 'openOrder';
+  }
+  document.querySelectorAll('#adminTabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.admin-tab').forEach(el => el.classList.toggle('hidden', el.id !== 'tab-' + tab));
+  if (tab === 'history') renderHistoryList();
+  if (tab === 'dev') {
+    document.getElementById('gasUrlInput').value = GAS_URL;
+    renderPerms();
+  }
+  if (tab === 'openOrder') {
+    initDetailEditor();
+    populateFavMenuSelect();
+  }
+}
+
+function updateActiveMenuBar() {
+  const bar = document.getElementById('activeMenuBar');
+  resolveActiveMenu();
+  if (!isMenuOpen()) {
+    bar.classList.add('hidden');
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    return;
+  }
+  bar.classList.remove('hidden');
+  const dead = parseDead(activeMenu.DeadTime);
+  const storeTxt = activeMenu.Store ? ` · 🏪 ${activeMenu.Store}` : '';
+  document.getElementById('activeMenuMeta').textContent =
+    `Menu #${activeMenu.indx} · 開立者 ${activeMenu.Creater || '—'}${storeTxt}`;
+  function tick() {
+    if (!dead) {
+      document.getElementById('countdownText').textContent = '未設定截止時間';
+      return;
+    }
+    const left = dead.getTime() - Date.now();
+    if (left <= 0) {
+      document.getElementById('countdownText').textContent = '已截止';
+      resolveActiveMenu();
+      renderEmployee();
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+      updateActiveMenuBar();
+      return;
+    }
+    const mins = Math.floor(left / 60000);
+    const secs = Math.floor((left % 60000) / 1000);
+    document.getElementById('countdownText').textContent =
+      `剩餘 ${mins} 分 ${String(secs).padStart(2, '0')} 秒`;
+  }
+  tick();
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = setInterval(tick, 1000);
+}
+
+function renderAdmin() {
+  resolveActiveMenu();
+  const todayK = dateKey();
+  const todayOrders = orders.filter(o => o.CrearDate && dateKey(new Date(o.CrearDate)) === todayK);
+  let meals = 0, amount = 0;
+  todayOrders.forEach(o => { meals += Number(o.Pcs) || 0; amount += Number(o.TotalPrice) || 0; });
+  document.getElementById('statOrders').textContent = todayOrders.length;
+  document.getElementById('statMeals').textContent = meals;
+  document.getElementById('statAmount').textContent = money(amount);
+
+  const t = new Date();
+  t.setMinutes(t.getMinutes() + 30);
+  if (!document.getElementById('deadlineInput').value) {
+    document.getElementById('deadlineInput').value = toLocalInput(t);
+  }
+  initDetailEditor();
+  populateFavMenuSelect();
+  renderWeekChart();
+  updateActiveMenuBar();
+  switchAdminTab('openOrder');
+
+  // 僅 Developer 可見「設定 / 權限」整頁
+  const devBtn = document.getElementById('devTabBtn');
+  const isDev = isDeveloper(currentUser?.Role);
+  if (devBtn) devBtn.style.display = isDev ? '' : 'none';
+  const permSec = document.getElementById('permSection');
+  if (permSec) permSec.style.display = isDev ? 'block' : 'none';
+  // 若目前在設定頁但不是開發者，強制切回開立
+  if (!isDev) {
+    const devPanel = document.getElementById('tab-dev');
+    if (devPanel && !devPanel.classList.contains('hidden')) {
+      switchAdminTab('openOrder');
+    }
+  }
+}
+
+function initDetailEditor() {
+  const box = document.getElementById('detailEditor');
+  if (!box.children.length) {
+    box.innerHTML = '';
+    addDetailRow('招牌雞腿飯', 100);
+    addDetailRow('排骨飯', 95);
+    addDetailRow('蔬食便當', 90);
+  }
+}
+function addDetailRow(info = '', price = '') {
+  const box = document.getElementById('detailEditor');
+  const row = document.createElement('div');
+  row.className = 'detail-row';
+  row.innerHTML = `
+    <input class="d-info" placeholder="Info 品名" value="${esc(info)}">
+    <input class="d-price" type="number" min="0" placeholder="Price" value="${price}" style="max-width:100px">
+    <button class="secondary" style="padding:8px 10px" title="刪除" onclick="this.parentElement.remove()">🗑️</button>`;
+  box.appendChild(row);
+}
+
+function getDetailRowsFromEditor() {
+  return [...document.querySelectorAll('#detailEditor .detail-row')].map(el => ({
+    Info: el.querySelector('.d-info').value.trim(),
+    Price: Number(el.querySelector('.d-price').value)
+  })).filter(x => x.Info && Number.isFinite(x.Price));
+}
+
+function populateFavMenuSelect() {
+  const sel = document.getElementById('favMenuSelect');
+  if (!sel) return;
+  const groups = {};
+  favorites.forEach(f => {
+    const k = String(f.indx);
+    if (!groups[k]) groups[k] = [];
+    groups[k].push(f);
+  });
+  const keys = Object.keys(groups).sort((a, b) => Number(b) - Number(a));
+  const current = sel.value;
+  sel.innerHTML = '<option value="">選取後匯入品項，可連續選</option>';
+  keys.forEach(k => {
+    const items = groups[k];
+    // 有 Name 顯示名稱，否則顯示 indx
+    const rawName = items[0] && items[0].Name != null ? String(items[0].Name).trim() : '';
+    const label = rawName || ('#' + k);
+    const preview = items.slice(0, 2).map(d => d.Info).join('、') || '無品項';
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = `${label} · ${preview}${items.length > 2 ? '…' : ''}（${items.length} 項）`;
+    sel.appendChild(opt);
+  });
+  if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
+}
+
+function loadFavoriteMenu() {
+  const indx = document.getElementById('favMenuSelect').value;
+  if (!indx) return;
+  const items = favorites.filter(f => String(f.indx) === String(indx));
+  if (!items.length) {
+    toast('此最愛無品項');
+    return;
+  }
+  // 加入（不覆蓋）現有菜單品項
+  items.forEach(d => addDetailRow(String(d.Info || ''), Number(d.Price) || 0));
+  const rawName = items[0] && items[0].Name != null ? String(items[0].Name).trim() : '';
+  const nm = rawName || ('#' + indx);
+  toast('已加入最愛：' + nm + '（' + items.length + ' 項）');
+  // 選完後重設下拉，方便連續加入其他最愛
+  document.getElementById('favMenuSelect').value = '';
+}
+
+async function saveAsFavorite() {
+  const rows = getDetailRowsFromEditor();
+  if (!rows.length) {
+    toast('請至少一筆品項再存最愛');
+    return;
+  }
+  document.getElementById('favNameInput').value = '';
+  document.getElementById('favNameBackdrop').classList.remove('hidden');
+  document.getElementById('favNameInput').focus();
+}
+async function confirmSaveFavorite() {
+  const name = document.getElementById('favNameInput').value.trim();
+  if (!name) { toast('請輸入最愛名稱'); return; }
+  const rows = getDetailRowsFromEditor();
+  if (!rows.length) { toast('請至少一筆品項'); return; }
+  document.getElementById('favNameBackdrop').classList.add('hidden');
+  setLoading(true, '正在儲存最愛…');
+  try {
+    const res = await gasPost({ action: 'saveFavorite', items: rows, name: name });
+    await loadFromServer();
+    populateFavMenuSelect();
+    toast('已存成最愛：' + (res.name || name));
+  } catch (e) {
+    toast('存最愛失敗：' + e.message);
+  }
+  setLoading(false);
+}
+function closeFavNameModal() {
+  document.getElementById('favNameBackdrop').classList.add('hidden');
+}
+
+async function openNewMenu() {
+  if (isMenuOpen()) {
+    toast('目前已有開放中的菜單，請先取消');
+    return;
+  }
+  const dead = document.getElementById('deadlineInput').value;
+  if (!dead) { toast('請設定 DeadTime'); return; }
+  const deadDate = new Date(dead);
+  if (isNaN(deadDate.getTime())) { toast('截止時間格式錯誤'); return; }
+  if (deadDate.getTime() < Date.now() + 10 * 60 * 1000) {
+    toast('截止時間需至少比現在晚 10 分鐘');
+    return;
+  }
+  const rows = getDetailRowsFromEditor();
+  if (!rows.length) { toast('請至少一筆 MenuDetail'); return; }
+
+  const maxIndx = menus.reduce((m, x) => Math.max(m, parseInt(x.indx, 10) || 0), 0);
+  const newIndx = String(maxIndx + 1);
+
+  const store = (document.getElementById('storeInput')?.value || '').trim();
+  const menuRow = {
+    indx: newIndx,
+    DeadTime: deadDate.toISOString(),
+    Creater: currentUser.Name,
+    CreateDate: new Date().toISOString(),
+    Store: store
+  };
+  const detailRows = rows.map(r => ({ indx: newIndx, Info: r.Info, Price: r.Price }));
+
+  document.getElementById('btnOpenMenu').disabled = true;
+  setLoading(true, '寫入 Menu / MenuDetail…');
+  try {
+    await gasPost({ action: 'openMenu', menu: menuRow, details: detailRows });
+    await loadFromServer();
+    resolveActiveMenu();
+    toast('已開立 Menu #' + newIndx);
+    renderEmployee();
+    renderAdmin();
+  } catch (e) {
+    toast('開立失敗：' + e.message);
+  }
+  document.getElementById('btnOpenMenu').disabled = false;
+  setLoading(false);
+}
+
+async function closeActiveMenu() {
+  if (!activeMenu) { toast('目前無開放菜單'); return; }
+  if (!confirm('確定要取消並【刪除】Menu #' + activeMenu.indx + '，此動作無法復原。')) return;
+  setLoading(true, '刪除菜單與相關訂單…');
+  try {
+    await gasPost({ action: 'closeMenu', indx: String(activeMenu.indx) });
+    await loadFromServer();
+    resolveActiveMenu();
+    toast('已刪除菜單與相關資料');
+    renderEmployee();
+    renderAdmin();
+  } catch (e) {
+    toast('關閉失敗：' + e.message);
+  }
+  setLoading(false);
+}
+
+function last7Keys() {
+  const keys = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    keys.push(dateKey(d));
+  }
+  return keys;
+}
+function renderWeekChart() {
+  const keys = last7Keys();
+  const labels = keys.map(k => {
+    const [, m, d] = k.split('-');
+    return `${Number(m)}/${Number(d)}`;
+  });
+  const qtyData = [], amountData = [];
+  keys.forEach(k => {
+    let q = 0, a = 0;
+    orders.forEach(o => {
+      if (o.CrearDate && dateKey(new Date(o.CrearDate)) === k) {
+        q += Number(o.Pcs) || 0;
+        a += Number(o.TotalPrice) || 0;
+      }
+    });
+    qtyData.push(q);
+    amountData.push(a);
+  });
+  const ctx = document.getElementById('weekChart');
+  if (weekChart) weekChart.destroy();
+  weekChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { type: 'bar', label: '數量 Pcs', data: qtyData, backgroundColor: 'rgba(47,90,64,0.55)', borderRadius: 6, yAxisID: 'y' },
+        { type: 'line', label: '金額', data: amountData, borderColor: '#d97843', tension: 0.3, yAxisID: 'y1', pointRadius: 4, pointBackgroundColor: '#d97843' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: '數量', font: { size: 11 } }, ticks: { precision: 0 } },
+        y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: '金額', font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function renderHistoryList() {
+  const box = document.getElementById('historyList');
+  const empty = document.getElementById('historyEmpty');
+
+  if (!orders.length) {
+    box.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  const byIndx = {};
+  orders.forEach(o => {
+    const k = String(o.indx);
+    if (!byIndx[k]) byIndx[k] = [];
+    byIndx[k].push(o);
+  });
+
+  const keys = Object.keys(byIndx).sort((a, b) => {
+    const maxA = Math.max(...byIndx[a].map(o => new Date(o.CrearDate || 0).getTime()));
+    const maxB = Math.max(...byIndx[b].map(o => new Date(o.CrearDate || 0).getTime()));
+    return maxB - maxA;
+  });
+
+  box.innerHTML = keys.map(k => {
+    const list = byIndx[k];
+    const totalPcs = list.reduce((s, o) => s + (Number(o.Pcs) || 0), 0);
+    const totalAmt = list.reduce((s, o) => s + (Number(o.TotalPrice) || 0), 0);
+    const menu = menus.find(m => String(m.indx) === k);
+    const title = menu
+      ? `Menu #${k} · ${menu.Creater || ''} · ${menu.CreateDate ? new Date(menu.CreateDate).toLocaleDateString('zh-TW') : ''}`
+      : `Menu #${k}`;
+    return `
+      <div class="menu-group-card" onclick="openHistoryDetail('${esc(k)}')">
+        <div class="title">${esc(title)}</div>
+        <div class="meta">${list.length} 筆訂單</div>
+        <div class="stats-line">${totalPcs} 個 · ${money(totalAmt)} → 點擊查看詳細</div>
+      </div>`;
+  }).join('');
+}
+
+function openHistoryDetail(indx) {
+  detailOrdersCache = orders.filter(o => String(o.indx) === String(indx));
+  detailSortKey = 'CrearDate';
+  detailSortDir = 'desc';
+  document.querySelectorAll('#historyDetailBackdrop .sort-ind').forEach(el => el.textContent = '');
+  const ind = document.getElementById('dsort-CrearDate');
+  if (ind) ind.textContent = '▼';
+
+  const menu = menus.find(m => String(m.indx) === String(indx));
+  document.getElementById('historyDetailTitle').textContent = `Menu #${indx} 訂單詳細`;
+  let meta = menu
+    ? `開立者 ${menu.Creater || '—'} · ${menu.CreateDate ? new Date(menu.CreateDate).toLocaleString('zh-TW') : ''}`
+    : '';
+  if (menu && menu.Store) meta += ` · 🏪 ${menu.Store}`;
+  document.getElementById('historyDetailMeta').textContent = meta;
+  document.getElementById('detailOrderSearch').value = '';
+  updateHistoryStats(detailOrdersCache);
+  renderDetailTable();
+  document.getElementById('historyDetailBackdrop').classList.remove('hidden');
+}
+function updateHistoryStats(list) {
+  const el = document.getElementById('historyStats');
+  if (!el) return;
+  if (!list.length) {
+    el.textContent = '尚無訂單';
+    return;
+  }
+  let totalAmt = 0, totalPcs = 0;
+  const itemCount = {};
+  list.forEach(o => {
+    totalAmt += Number(o.TotalPrice) || 0;
+    totalPcs += Number(o.Pcs) || 0;
+    const parts = parseOrderInfo(o.Info);
+    Object.keys(parts).forEach(name => {
+      itemCount[name] = (itemCount[name] || 0) + (parts[name] || 0);
+    });
+  });
+  const breakdown = Object.keys(itemCount)
+    .sort((a, b) => itemCount[b] - itemCount[a])
+    .map(n => `${n}×${itemCount[n]}`)
+    .join(' / ');
+  el.innerHTML = `<strong>統計</strong>　共 ${list.length} 筆 · ${totalPcs} 個 · 總金額 <strong>${money(totalAmt)}</strong><br>${breakdown || '—'}`;
+}
+
+function closeHistoryDetail() {
+  document.getElementById('historyDetailBackdrop').classList.add('hidden');
+}
+
+function sortDetail(key) {
+  if (detailSortKey === key) {
+    detailSortDir = detailSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    detailSortKey = key;
+    detailSortDir = (key === 'CrearDate' || key === 'TotalPrice' || key === 'Pcs') ? 'desc' : 'asc';
+  }
+  document.querySelectorAll('#historyDetailBackdrop .sort-ind').forEach(el => el.textContent = '');
+  const ind = document.getElementById('dsort-' + key);
+  if (ind) ind.textContent = detailSortDir === 'asc' ? '▲' : '▼';
+  renderDetailTable();
+}
+
+function renderDetailTable() {
+  const tbody = document.getElementById('detailTableBody');
+  const q = (document.getElementById('detailOrderSearch')?.value || '').trim().toLowerCase();
+
+  let list = detailOrdersCache.slice();
+  if (q) {
+    list = list.filter(o => {
+      const hay = [o.Name, o.Info, o.TotalPrice, o.Pcs, o.CrearDate].join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  list.sort((a, b) => {
+    let va = a[detailSortKey], vb = b[detailSortKey];
+    if (detailSortKey === 'CrearDate') {
+      va = new Date(va || 0).getTime();
+      vb = new Date(vb || 0).getTime();
+    } else if (detailSortKey === 'TotalPrice' || detailSortKey === 'Pcs') {
+      va = Number(va) || 0;
+      vb = Number(vb) || 0;
+    } else {
+      va = String(va || '').toLowerCase();
+      vb = String(vb || '').toLowerCase();
+    }
+    if (va < vb) return detailSortDir === 'asc' ? -1 : 1;
+    if (va > vb) return detailSortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted)">無符合資料</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(o => `
+    <tr>
+      <td>${o.CrearDate ? new Date(o.CrearDate).toLocaleString('zh-TW') : '—'}</td>
+      <td>${esc(o.Name)}</td>
+      <td title="${esc(o.Info)}">${esc(o.Info)}</td>
+      <td>${o.Pcs}</td>
+      <td>${money(o.TotalPrice)}</td>
+    </tr>
+  `).join('');
+}
+
+function renderPerms() {
+  const box = document.getElementById('permList');
+  if (!isDeveloper(currentUser?.Role)) {
+    box.innerHTML = '<div class="subtle">僅 Developer 可管理權限</div>';
+    return;
+  }
+  if (!users.length) { box.innerHTML = '<div class="empty">尚無使用者</div>'; return; }
+  box.innerHTML = users.map(u => {
+    const isSelf = u.Cookie === currentUser?.Cookie;
+    return `
+    <div class="perm-row">
+      <div>
+        <strong>${esc(u.Name)}</strong>
+        <div class="subtle">${isSelf ? '（你）' : esc(u.Cookie)}</div>
+      </div>
+      <select class="role-select" ${isSelf ? 'disabled' : ''} onchange="setRoleBySelect('${esc(u.Cookie)}', this.value)">
+        <option value="user" ${u.Role === 'user' ? 'selected' : ''}>Regular</option>
+        <option value="admin" ${u.Role === 'admin' ? 'selected' : ''}>Admin</option>
+        <option value="developer" ${u.Role === 'developer' ? 'selected' : ''}>Developer</option>
+      </select>
+    </div>`;
+  }).join('');
+}
+
+async function setRoleBySelect(cookie, role) {
+  if (!isDeveloper(currentUser?.Role)) {
+    toast('僅 Developer 可修改權限');
+    return;
+  }
+  const allowed = ['user', 'admin', 'developer'];
+  if (!allowed.includes(role)) return;
+  setLoading(true, '更新權限…');
+  try {
+    await gasPost({ action: 'setRole', cookie, role });
+    await loadFromServer();
+    toast('已更新為「' + roleLabel(role) + '」');
+    renderPerms();
+  } catch (e) {
+    toast('更新失敗：' + e.message);
+  }
+  setLoading(false);
+}
+
+function exportCSV() {
+  if (!orders.length) { toast('無訂單'); return; }
+  const rows = [['indx', 'Name', 'Info', 'TotalPrice', 'Pcs', 'CrearDate']];
+  orders.forEach(o => rows.push([o.indx, o.Name, o.Info, o.TotalPrice, o.Pcs, o.CrearDate]));
+  const csv = '\ufeff' + rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  a.download = 'Asahi_Lamp_Order.csv';
+  a.click();
+  toast('已匯出');
+}
+
+document.getElementById('modalBackdrop').addEventListener('click', e => { if (e.target.id === 'modalBackdrop') closeModal(); });
+document.getElementById('noPermBackdrop').addEventListener('click', e => { if (e.target.id === 'noPermBackdrop') closeNoPerm(); });
+document.getElementById('historyDetailBackdrop').addEventListener('click', e => { if (e.target.id === 'historyDetailBackdrop') closeHistoryDetail(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModal();
+    closeNoPerm();
+    closeHistoryDetail();
+    closeFavNameModal();
+  }
+});
+document.getElementById('favNameBackdrop').addEventListener('click', e => {
+  if (e.target.id === 'favNameBackdrop') closeFavNameModal();
+});
+
+boot();
+</script>
+</body>
+</html>
