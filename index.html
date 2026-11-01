@@ -465,7 +465,7 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}
    Favorite    | indx | Info | Price   ← indx = 一組最愛的流水號
    ========================================================= */
 
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzGF0RRutKQUGETYWceIDFtGgo0ybiE3wXZGN_4EIJEXLYmAoN3GX_6lJe_wIX45td30A/exec';
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbxaY_puD0HIg93ct_tPTj6TT7ZJmfHTH9LThKd0kkFNU6NoOdGvITYmXNgs39IqCZHNYw/exec';
 
 const COOKIE_KEY = 'asahi_lamp_cookie';
 const GAS_URL_KEY = 'asahi_gas_url';
@@ -1473,7 +1473,10 @@ function renderPerms() {
     const isSelf = u.Cookie === currentUser?.Cookie;
     const isFirst = firstIndx !== null && parseInt(u.indx, 10) === firstIndx;
     const noDelete = isSelf || isFirst;
+    // 首個帳號：任何人（含其他 Developer）皆不可改其權限或刪除
+    const noRoleEdit = isSelf || isFirst;
     const delTitle = isFirst ? '系統首個帳號，不可刪除' : (isSelf ? '不能刪除自己' : '刪除使用者');
+    const roleTitle = isFirst ? '系統首個帳號，不可調整權限' : (isSelf ? '不能改自己的權限' : '調整權限');
     return `
     <div class="perm-row">
       <div style="min-width:0">
@@ -1481,7 +1484,7 @@ function renderPerms() {
         <div class="subtle">${isSelf ? '（你）' : esc(u.Cookie)}</div>
       </div>
       <div class="perm-actions">
-        <select class="role-select" ${isSelf ? 'disabled' : ''} onchange="setRoleBySelect('${esc(u.Cookie)}', this.value)">
+        <select class="role-select" title="${roleTitle}" ${noRoleEdit ? 'disabled' : ''} onchange="setRoleBySelect('${esc(u.Cookie)}', this.value)">
           <option value="user" ${u.Role === 'user' ? 'selected' : ''}>Regular</option>
           <option value="admin" ${u.Role === 'admin' ? 'selected' : ''}>Admin</option>
           <option value="developer" ${u.Role === 'developer' ? 'selected' : ''}>Developer</option>
@@ -1496,6 +1499,23 @@ function renderPerms() {
 async function setRoleBySelect(cookie, role) {
   if (!isDeveloper(currentUser?.Role)) {
     toast('僅 Developer 可修改權限');
+    return;
+  }
+  // 保護首個帳號：不可被任何人調整權限
+  const first = users.reduce((best, u) => {
+    const n = parseInt(u.indx, 10);
+    if (!Number.isFinite(n)) return best;
+    if (!best || n < parseInt(best.indx, 10)) return u;
+    return best;
+  }, null);
+  if (first && String(first.Cookie) === String(cookie)) {
+    toast('系統首個帳號無法調整權限');
+    renderPerms();
+    return;
+  }
+  if (cookie === currentUser?.Cookie) {
+    toast('不能修改自己的權限');
+    renderPerms();
     return;
   }
   const allowed = ['user', 'admin', 'developer'];
