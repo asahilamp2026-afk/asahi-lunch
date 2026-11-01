@@ -333,13 +333,15 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}
 
     <section class="panel admin-tab hidden" id="tab-dev">
       <div class="section-head" style="margin-top:0">
-        <div><h3>連線狀態</h3><p>GAS 網址已寫死於程式，一般使用者無法修改</p></div>
+        <div><h3>連線狀態</h3><p>可設定 / 修改 GAS Web App 網址（僅 Developer）</p></div>
       </div>
       <div class="field">
-        <label>目前連線（僅 Developer 可見，唯讀）</label>
-        <input id="gasUrlInput" readonly placeholder="（由程式 DEFAULT_GAS_URL 決定）">
+        <label>目前連線（僅 Developer 可修改）</label>
+        <input id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
       </div>
       <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="primary" onclick="saveGasUrlAndReload()">儲存連線</button>
+        <button class="secondary" onclick="resetGasUrlToDefault()">還原預設</button>
         <button class="secondary" onclick="reloadFromServer()">重新載入資料</button>
       </div>
       <div class="notice" style="margin-top:12px" id="connStatus">尚未連線</div>
@@ -363,12 +365,13 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}
 <div id="setupBackdrop" class="modal-backdrop hidden" role="dialog">
   <div class="modal">
     <h3>設定 Google Sheet 連線</h3>
-    <p>請貼上 Apps Script 部署後的 Web App 網址（結尾為 /exec）。</p>
+    <p>請貼上 Apps Script 部署後的 Web App 網址（結尾為 /exec）。若連線異常，可還原為程式內建預設網址。</p>
     <div class="field">
       <label>GAS URL</label>
       <input id="setupGasUrl" placeholder="https://script.google.com/macros/s/.../exec">
     </div>
     <div class="modal-actions">
+      <button class="secondary" onclick="resetGasUrlToDefault()">還原預設</button>
       <button class="primary" onclick="saveSetupUrl()">連線</button>
     </div>
   </div>
@@ -465,17 +468,29 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}
    Favorite    | indx | Info | Price   ← indx = 一組最愛的流水號
    ========================================================= */
 
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbxaY_puD0HIg93ct_tPTj6TT7ZJmfHTH9LThKd0kkFNU6NoOdGvITYmXNgs39IqCZHNYw/exec';
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbxz2X33puwcodf-2kKUgo72FzrwCZS52htbH2PU8Wlf7evamUb9pcnDAeqp8xtIYwwj6w/exec';
 
 const COOKIE_KEY = 'asahi_lamp_cookie';
 const GAS_URL_KEY = 'asahi_gas_url';
 const FAV_KEY = 'asahi_fav_only';
 
-// 正式環境：只使用程式寫死的 DEFAULT_GAS_URL，不開放一般使用者改連線
-// （避免有心人把前端指到其他端點）
-let GAS_URL = (DEFAULT_GAS_URL && String(DEFAULT_GAS_URL).includes('script.google.com'))
-  ? DEFAULT_GAS_URL
-  : '';
+/** 從 localStorage 讀取先前設定的 GAS URL（若有效） */
+function getStoredGasUrl() {
+  try {
+    const u = (localStorage.getItem(GAS_URL_KEY) || '').trim();
+    if (u && u.includes('script.google.com') && u.includes('/exec')) return u;
+  } catch (e) {}
+  return '';
+}
+
+/** 驗證是否為可用的 GAS /exec 網址 */
+function isValidGasUrl(url) {
+  const u = String(url || '').trim();
+  return !!(u && u.includes('script.google.com') && u.includes('/exec'));
+}
+
+// 優先使用 localStorage 的連線，否則 fallback 到程式寫死的 DEFAULT
+let GAS_URL = getStoredGasUrl() || (isValidGasUrl(DEFAULT_GAS_URL) ? DEFAULT_GAS_URL : '');
 
 let currentUser = null;
 let users = [];
@@ -643,8 +658,10 @@ async function boot() {
 
   if (!GAS_URL) {
     setLoading(false);
-    setConnStatus(false, '系統未設定連線，請聯絡 Developer');
-    toast('系統未設定連線，請聯絡管理員');
+    setConnStatus(false, '尚未設定 GAS 連線');
+    document.getElementById('setupGasUrl').value = DEFAULT_GAS_URL || '';
+    document.getElementById('setupBackdrop').classList.remove('hidden');
+    toast('請先設定 GAS 連線網址');
     return;
   }
 
@@ -656,7 +673,10 @@ async function boot() {
     console.error(e);
     setLoading(false);
     setConnStatus(false, '連線失敗：' + e.message);
-    toast('連線失敗，請稍後再試或聯絡管理員');
+    toast('連線失敗，可重新設定 GAS URL 或稍後再試');
+    // 連線失敗時開放設定視窗，方便修正
+    document.getElementById('setupGasUrl').value = GAS_URL || DEFAULT_GAS_URL || '';
+    document.getElementById('setupBackdrop').classList.remove('hidden');
     return;
   }
   setLoading(false);
@@ -674,14 +694,63 @@ async function boot() {
 }
 
 function saveSetupUrl() {
-  // 已停用：不允許從前端改 GAS 連線
-  toast('連線由系統設定，無法從網頁修改');
+  const url = (document.getElementById('setupGasUrl').value || '').trim();
+  if (!isValidGasUrl(url)) {
+    toast('請提供正確的 GAS /exec 網址');
+    return;
+  }
+  GAS_URL = url;
+  try { localStorage.setItem(GAS_URL_KEY, url); } catch (e) {}
   document.getElementById('setupBackdrop').classList.add('hidden');
+  const gasInput = document.getElementById('gasUrlInput');
+  if (gasInput) gasInput.value = GAS_URL;
+  toast('已設定連線，重新載入中…');
+  boot();
 }
 
-function saveGasUrlAndReload() {
-  toast('連線由系統設定，無法從網頁修改');
+/** 在 Developer 設定頁儲存 GAS URL（寫入 localStorage + 可選寫入 Sheet） */
+async function saveGasUrlAndReload() {
+  const url = (document.getElementById('gasUrlInput').value || '').trim();
+  if (!isValidGasUrl(url)) {
+    toast('請提供正確的 GAS /exec 網址');
+    return;
+  }
+  GAS_URL = url;
+  try { localStorage.setItem(GAS_URL_KEY, url); } catch (e) {}
+
+  // 若已登入且為 Developer，順便寫入 GAS 表做紀錄
+  if (currentUser && isDeveloper(currentUser.Role)) {
+    setLoading(true, '儲存連線設定…');
+    try {
+      await gasPost({
+        action: 'setGasUrl',
+        url: url,
+        user: currentUser.Name,
+        cookie: currentUser.Cookie
+      });
+    } catch (e) {
+      // 寫入 Sheet 失敗不阻擋前端連線（可能是舊部署尚未有此 action）
+      console.warn('setGasUrl 寫入失敗（仍會使用新 URL）:', e);
+    }
+    setLoading(false);
+  }
+
+  toast('連線已更新，重新載入…');
   boot();
+}
+
+/** 清除本機儲存的 GAS URL，改回 DEFAULT */
+function resetGasUrlToDefault() {
+  try { localStorage.removeItem(GAS_URL_KEY); } catch (e) {}
+  GAS_URL = isValidGasUrl(DEFAULT_GAS_URL) ? DEFAULT_GAS_URL : '';
+  const gasInput = document.getElementById('gasUrlInput');
+  if (gasInput) gasInput.value = GAS_URL;
+  document.getElementById('setupGasUrl').value = GAS_URL;
+  toast('已還原為預設連線');
+  if (GAS_URL) boot();
+  else {
+    document.getElementById('setupBackdrop').classList.remove('hidden');
+  }
 }
 
 async function reloadFromServer() {
@@ -1473,18 +1542,15 @@ function renderPerms() {
     const isSelf = u.Cookie === currentUser?.Cookie;
     const isFirst = firstIndx !== null && parseInt(u.indx, 10) === firstIndx;
     const noDelete = isSelf || isFirst;
-    // 首個帳號：任何人（含其他 Developer）皆不可改其權限或刪除
-    const noRoleEdit = isSelf || isFirst;
     const delTitle = isFirst ? '系統首個帳號，不可刪除' : (isSelf ? '不能刪除自己' : '刪除使用者');
-    const roleTitle = isFirst ? '系統首個帳號，不可調整權限' : (isSelf ? '不能改自己的權限' : '調整權限');
     return `
     <div class="perm-row">
       <div style="min-width:0">
-        <strong>${esc(u.Name)}</strong>${isFirst ? ' <span class="subtle">（首個帳號）</span>' : ''}
+        <strong>${esc(u.Name)}</strong>
         <div class="subtle">${isSelf ? '（你）' : esc(u.Cookie)}</div>
       </div>
       <div class="perm-actions">
-        <select class="role-select" title="${roleTitle}" ${noRoleEdit ? 'disabled' : ''} onchange="setRoleBySelect('${esc(u.Cookie)}', this.value)">
+        <select class="role-select" ${isSelf ? 'disabled' : ''} onchange="setRoleBySelect('${esc(u.Cookie)}', this.value)">
           <option value="user" ${u.Role === 'user' ? 'selected' : ''}>Regular</option>
           <option value="admin" ${u.Role === 'admin' ? 'selected' : ''}>Admin</option>
           <option value="developer" ${u.Role === 'developer' ? 'selected' : ''}>Developer</option>
@@ -1499,23 +1565,6 @@ function renderPerms() {
 async function setRoleBySelect(cookie, role) {
   if (!isDeveloper(currentUser?.Role)) {
     toast('僅 Developer 可修改權限');
-    return;
-  }
-  // 保護首個帳號：不可被任何人調整權限
-  const first = users.reduce((best, u) => {
-    const n = parseInt(u.indx, 10);
-    if (!Number.isFinite(n)) return best;
-    if (!best || n < parseInt(best.indx, 10)) return u;
-    return best;
-  }, null);
-  if (first && String(first.Cookie) === String(cookie)) {
-    toast('系統首個帳號無法調整權限');
-    renderPerms();
-    return;
-  }
-  if (cookie === currentUser?.Cookie) {
-    toast('不能修改自己的權限');
-    renderPerms();
     return;
   }
   const allowed = ['user', 'admin', 'developer'];
