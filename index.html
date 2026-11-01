@@ -1550,7 +1550,7 @@ function renderPerms() {
         <div class="subtle">${isSelf ? '（你）' : esc(u.Cookie)}</div>
       </div>
       <div class="perm-actions">
-        <select class="role-select" ${isSelf ? 'disabled' : ''} onchange="setRoleBySelect('${esc(u.Cookie)}', this.value)">
+        <select class="role-select" ${isSelf || isFirst ? 'disabled' : ''} onchange="setRoleBySelect('${esc(u.Cookie)}', this.value)">
           <option value="user" ${u.Role === 'user' ? 'selected' : ''}>Regular</option>
           <option value="admin" ${u.Role === 'admin' ? 'selected' : ''}>Admin</option>
           <option value="developer" ${u.Role === 'developer' ? 'selected' : ''}>Developer</option>
