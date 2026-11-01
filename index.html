@@ -1525,6 +1525,8 @@ function renderPerms() {
       return hay.includes(q);
     });
   }
+
+  if (!list.length) {
     box.innerHTML = '<div class="subtle" style="padding:12px 0">沒有符合「' + esc(q) + '」的使用者</div>';
     return;
   }
