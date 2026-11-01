@@ -333,14 +333,13 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}
 
     <section class="panel admin-tab hidden" id="tab-dev">
       <div class="section-head" style="margin-top:0">
-        <div><h3>GAS 連線</h3></div>
+        <div><h3>連線狀態</h3><p>GAS 網址已寫死於程式，一般使用者無法修改</p></div>
       </div>
       <div class="field">
-        <label>GAS Web App URL（/exec）</label>
-        <input id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+        <label>目前連線（僅 Developer 可見，唯讀）</label>
+        <input id="gasUrlInput" readonly placeholder="（由程式 DEFAULT_GAS_URL 決定）">
       </div>
       <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="primary" onclick="saveGasUrlAndReload()">儲存並重新連線</button>
         <button class="secondary" onclick="reloadFromServer()">重新載入資料</button>
       </div>
       <div class="notice" style="margin-top:12px" id="connStatus">尚未連線</div>
@@ -472,7 +471,11 @@ const COOKIE_KEY = 'asahi_lamp_cookie';
 const GAS_URL_KEY = 'asahi_gas_url';
 const FAV_KEY = 'asahi_fav_only';
 
-let GAS_URL = localStorage.getItem(GAS_URL_KEY) || DEFAULT_GAS_URL;
+// 正式環境：只使用程式寫死的 DEFAULT_GAS_URL，不開放一般使用者改連線
+// （避免有心人把前端指到其他端點）
+let GAS_URL = (DEFAULT_GAS_URL && String(DEFAULT_GAS_URL).includes('script.google.com'))
+  ? DEFAULT_GAS_URL
+  : '';
 
 let currentUser = null;
 let users = [];
@@ -635,25 +638,25 @@ function isMenuOpen() {
 }
 
 async function boot() {
-  document.getElementById('gasUrlInput').value = GAS_URL;
+  const gasInput = document.getElementById('gasUrlInput');
+  if (gasInput) gasInput.value = GAS_URL;
 
   if (!GAS_URL) {
     setLoading(false);
-    document.getElementById('setupBackdrop').classList.remove('hidden');
+    setConnStatus(false, '系統未設定連線，請聯絡 Developer');
+    toast('系統未設定連線，請聯絡管理員');
     return;
   }
 
   setLoading(true, 'Loading…');
   try {
     await loadFromServer();
-    setConnStatus(true, '已連線：' + GAS_URL.slice(0, 48) + '…');
+    setConnStatus(true, '已連線');
   } catch (e) {
     console.error(e);
     setLoading(false);
     setConnStatus(false, '連線失敗：' + e.message);
-    toast('連線失敗：' + e.message);
-    document.getElementById('setupBackdrop').classList.remove('hidden');
-    document.getElementById('setupGasUrl').value = GAS_URL;
+    toast('連線失敗，請稍後再試或聯絡管理員');
     return;
   }
   setLoading(false);
@@ -671,23 +674,13 @@ async function boot() {
 }
 
 function saveSetupUrl() {
-  const url = document.getElementById('setupGasUrl').value.trim();
-  if (!url || !url.includes('script.google.com')) {
-    toast('請貼上正確的 GAS /exec 網址');
-    return;
-  }
-  GAS_URL = url;
-  localStorage.setItem(GAS_URL_KEY, GAS_URL);
+  // 已停用：不允許從前端改 GAS 連線
+  toast('連線由系統設定，無法從網頁修改');
   document.getElementById('setupBackdrop').classList.add('hidden');
-  boot();
 }
 
 function saveGasUrlAndReload() {
-  const url = document.getElementById('gasUrlInput').value.trim();
-  if (!url) { toast('請輸入 URL'); return; }
-  GAS_URL = url;
-  localStorage.setItem(GAS_URL_KEY, GAS_URL);
-  toast('已儲存，重新連線…');
+  toast('連線由系統設定，無法從網頁修改');
   boot();
 }
 
