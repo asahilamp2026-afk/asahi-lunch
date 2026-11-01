@@ -148,10 +148,51 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}
 .hero.hero-closed p{color:#e4e6e2}
 .hero.hero-closed:after{border-color:rgba(255,255,255,.12);box-shadow:0 0 0 22px rgba(255,255,255,.04)}
 
+
+/* 手機截止時間欄位不撐爆 */
+#deadlineInput{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  box-sizing:border-box;
+  font-size:16px; /* iOS 避免自動放大 */
+}
+.field input[type="datetime-local"]{
+  -webkit-appearance:none;
+  appearance:none;
+}
+.perm-actions{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-shrink:0;
+}
+.perm-actions .role-select{
+  min-width:0;
+  max-width:42vw;
+}
+.icon-btn{
+  border:1px solid #f0c8c8;
+  background:#fff5f5;
+  color:var(--danger);
+  border-radius:8px;
+  padding:6px 8px;
+  line-height:1;
+  font-size:14px;
+}
+.icon-btn:disabled{
+  opacity:.35;
+  cursor:not-allowed;
+}
+@media(max-width:760px){
+  .form-grid{grid-template-columns:1fr !important;}
+  #deadlineInput{font-size:16px;padding:10px 8px;}
+}
+
 </style>
 </head>
 <body>
-<div id="loadingMask" class="loading-mask">連線 Google Sheet 中…</div>
+<div id="loadingMask" class="loading-mask">Loading…</div>
 
 <div class="app">
   <header class="topbar">
@@ -422,7 +463,7 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}
    Favorite    | indx | Info | Price   ← indx = 一組最愛的流水號
    ========================================================= */
 
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzrt-Tn-bx-JxTXhNUQJNyV3UZSYD-awpHgwuwIHZKn6pww4sVsBtahFqQijWxxXMYvoA/exec';
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbw6-ekyPekdCGegKqQXS8Nsg63AwvQSBjYGT1NPMeOv6PbkoVUH4md_9lqVvtsdQmetqg/exec';
 
 const COOKIE_KEY = 'asahi_lamp_cookie';
 const GAS_URL_KEY = 'asahi_gas_url';
@@ -484,7 +525,7 @@ function parseDead(v) {
 function setLoading(on, text) {
   const el = document.getElementById('loadingMask');
   if (on) {
-    el.textContent = text || '連線 Google Sheet 中…';
+    el.textContent = text || 'Loading…';
     el.classList.remove('hidden');
   } else {
     el.classList.add('hidden');
@@ -599,7 +640,7 @@ async function boot() {
     return;
   }
 
-  setLoading(true, '連線 Google Sheet 中…');
+  setLoading(true, 'Loading…');
   try {
     await loadFromServer();
     setConnStatus(true, '已連線：' + GAS_URL.slice(0, 48) + '…');
@@ -1413,15 +1454,19 @@ function renderPerms() {
     const isSelf = u.Cookie === currentUser?.Cookie;
     return `
     <div class="perm-row">
-      <div>
+      <div style="min-width:0">
         <strong>${esc(u.Name)}</strong>
         <div class="subtle">${isSelf ? '（你）' : esc(u.Cookie)}</div>
       </div>
-      <select class="role-select" ${isSelf ? 'disabled' : ''} onchange="setRoleBySelect('${esc(u.Cookie)}', this.value)">
-        <option value="user" ${u.Role === 'user' ? 'selected' : ''}>Regular</option>
-        <option value="admin" ${u.Role === 'admin' ? 'selected' : ''}>Admin</option>
-        <option value="developer" ${u.Role === 'developer' ? 'selected' : ''}>Developer</option>
-      </select>
+      <div class="perm-actions">
+        <select class="role-select" ${isSelf ? 'disabled' : ''} onchange="setRoleBySelect('${esc(u.Cookie)}', this.value)">
+          <option value="user" ${u.Role === 'user' ? 'selected' : ''}>Regular</option>
+          <option value="admin" ${u.Role === 'admin' ? 'selected' : ''}>Admin</option>
+          <option value="developer" ${u.Role === 'developer' ? 'selected' : ''}>Developer</option>
+        </select>
+        <button class="icon-btn" title="刪除使用者" ${isSelf ? 'disabled' : ''}
+          onclick="deleteUser('${esc(u.Cookie)}', '${esc(u.Name)}')">🗑️</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -1441,6 +1486,28 @@ async function setRoleBySelect(cookie, role) {
     renderPerms();
   } catch (e) {
     toast('更新失敗：' + e.message);
+  }
+  setLoading(false);
+}
+
+async function deleteUser(cookie, name) {
+  if (!isDeveloper(currentUser?.Role)) {
+    toast('僅 Developer 可刪除使用者');
+    return;
+  }
+  if (cookie === currentUser?.Cookie) {
+    toast('不能刪除自己');
+    return;
+  }
+  if (!confirm('確定從系統刪除使用者「' + name + '」？\n只會刪除 User 表資料，不會刪訂單或其他紀錄。')) return;
+  setLoading(true, '刪除使用者…');
+  try {
+    await gasPost({ action: 'deleteUser', cookie: cookie });
+    await loadFromServer();
+    toast('已刪除使用者：' + name);
+    renderPerms();
+  } catch (e) {
+    toast('刪除失敗：' + e.message);
   }
   setLoading(false);
 }
