@@ -189,6 +189,50 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}
   #deadlineInput{font-size:16px;padding:10px 8px;}
 }
 
+/* 訂單成功畫面 */
+.order-success{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:28px 20px 22px;
+  margin:6px 0 18px;
+  box-shadow:var(--shadow);
+  text-align:center;
+}
+.order-success .ok-icon{
+  width:64px;height:64px;border-radius:50%;
+  background:#e5f3d9;color:#2f5a37;
+  display:grid;place-items:center;
+  font-size:32px;margin:0 auto 14px;
+}
+.order-success h3{margin:0 0 6px;font-size:20px;color:var(--green)}
+.order-success .sub{color:var(--muted);font-size:13px;margin:0 0 18px;line-height:1.55}
+.order-success .summary{
+  text-align:left;
+  background:#f7f6f1;
+  border-radius:14px;
+  padding:14px 16px;
+  margin-bottom:16px;
+}
+.order-success .summary-row{
+  display:flex;justify-content:space-between;gap:12px;
+  font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line);
+}
+.order-success .summary-row:last-child{border-bottom:0}
+.order-success .summary-row .k{color:var(--muted)}
+.order-success .summary-row .v{font-weight:700;text-align:right;word-break:break-all}
+.order-success .summary-total{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:10px;padding-top:10px;border-top:1px solid var(--line);
+  font-size:15px;font-weight:800;color:var(--green);
+}
+.order-success .actions{
+  display:flex;gap:8px;justify-content:center;flex-wrap:wrap;
+}
+.active-menu-bar .bar-actions{
+  display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+}
+
 </style>
 </head>
 <body>
@@ -232,6 +276,18 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}
       <p class="subtle">管理員還沒有開立今日菜單，或已超過截止時間。</p>
     </div>
 
+    <!-- 訂單成功／已訂餐摘要 -->
+    <div id="orderSuccessState" class="order-success hidden">
+      <div class="ok-icon">✓</div>
+      <h3 id="successTitle">訂單已送出</h3>
+      <p class="sub" id="successSub">你的訂餐已成功寫入系統，可在下方查看明細。</p>
+      <div class="summary" id="successSummary"></div>
+      <div class="actions" id="successActions">
+        <button class="secondary" id="btnEditOrder" onclick="startEditOrder()">修改訂單</button>
+        <button class="danger-btn" id="btnCancelFromSuccess" onclick="cancelOrder()">取消訂餐</button>
+      </div>
+    </div>
+
     <div id="openState">
       <div id="alreadyOrderedBox" class="already-ordered hidden">
         你已訂過此菜單，可修改數量後再次送出（會覆蓋原訂單，不會重複）。
@@ -267,7 +323,10 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}
         <div class="countdown" id="countdownText">—</div>
         <div class="meta" id="activeMenuMeta">目前無開放菜單</div>
       </div>
-      <button class="danger-btn" id="btnCloseMenu" onclick="closeActiveMenu()">取消</button>
+      <div class="bar-actions">
+        <button class="secondary" id="btnSettleMenu" onclick="settleActiveMenu()" title="提早結束訂餐，保留訂單資料">提早結算</button>
+        <button class="danger-btn" id="btnCloseMenu" onclick="closeActiveMenu()">取消</button>
+      </div>
     </div>
 
     <section class="panel">
@@ -468,7 +527,7 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}
    Favorite    | indx | Info | Price   ← indx = 一組最愛的流水號
    ========================================================= */
 
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbxz2X33puwcodf-2kKUgo72FzrwCZS52htbH2PU8Wlf7evamUb9pcnDAeqp8xtIYwwj6w/exec';
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycby68DARUvka9HwCdE9juJ61OmRgpb34l2jr1slEv_OX-iM6-Z7Z-0CYbxETcAGePTmpdQ/exec';
 
 const COOKIE_KEY = 'asahi_lamp_cookie';
 const GAS_URL_KEY = 'asahi_gas_url';
@@ -503,6 +562,8 @@ let cart = {};
 let weekChart = null;
 let countdownTimer = null;
 let existingOrder = null;
+/** 使用者正在修改已存在的訂單（顯示菜單而非成功畫面） */
+let editingOrder = false;
 
 let detailSortKey = 'CrearDate';
 let detailSortDir = 'desc';
@@ -837,27 +898,65 @@ function findExistingOrder() {
   ) || null;
 }
 
-function renderEmployee() {
+function renderOrderSuccess(order, opts = {}) {
+  const el = document.getElementById('orderSuccessState');
+  if (!el || !order) return;
+  const justSaved = !!opts.justSaved;
+  const isUpdate = !!opts.isUpdate;
+  document.getElementById('successTitle').textContent =
+    justSaved ? (isUpdate ? '訂單已更新' : '訂單已送出') : '你已完成本次訂餐';
+  document.getElementById('successSub').textContent = justSaved
+    ? '訂餐已成功寫入系統，以下是你的訂單明細。'
+    : '系統偵測到你在此菜單已有訂單，明細如下。若要變更請點「修改訂單」。';
+
+  const storeTxt = (activeMenu && activeMenu.Store && String(activeMenu.Store).trim())
+    ? String(activeMenu.Store).trim()
+    : (activeMenu ? ('#' + activeMenu.indx) : '—');
+  const timeStr = order.CrearDate
+    ? new Date(order.CrearDate).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : '—';
+
+  document.getElementById('successSummary').innerHTML = `
+    <div class="summary-row"><span class="k">訂餐人</span><span class="v">${esc(order.Name || currentUser?.Name || '')}</span></div>
+    <div class="summary-row"><span class="k">店家 / 菜單</span><span class="v">${esc(storeTxt)}</span></div>
+    <div class="summary-row"><span class="k">品項</span><span class="v">${esc(order.Info || '—')}</span></div>
+    <div class="summary-row"><span class="k">數量</span><span class="v">${Number(order.Pcs) || 0} 個</span></div>
+    <div class="summary-row"><span class="k">下單時間</span><span class="v">${esc(timeStr)}</span></div>
+    <div class="summary-total"><span>合計</span><span>${money(order.TotalPrice)}</span></div>
+  `;
+
+  // 僅在菜單仍開放時允許修改／取消
+  const canEdit = isMenuOpen();
+  document.getElementById('btnEditOrder').style.display = canEdit ? '' : 'none';
+  document.getElementById('btnCancelFromSuccess').style.display = canEdit ? '' : 'none';
+  el.classList.remove('hidden');
+}
+
+function startEditOrder() {
+  if (!existingOrder || !isMenuOpen()) {
+    toast('目前無法修改');
+    return;
+  }
+  editingOrder = true;
+  cart = parseOrderInfo(existingOrder.Info);
+  document.getElementById('orderSuccessState').classList.add('hidden');
+  document.getElementById('openState').classList.remove('hidden');
+  document.getElementById('bottomBar').style.display = 'flex';
+  document.getElementById('alreadyOrderedBox').classList.remove('hidden');
+  document.getElementById('submitOrder').textContent = '修改訂單 →';
+  document.getElementById('cancelOrderBtn').classList.remove('hidden');
+  document.getElementById('heroTitle').textContent = '修改你的訂單';
+  document.getElementById('heroDesc').textContent = '調整數量後再次送出，會覆蓋原訂單。';
+  renderFavorites();
+  renderMenu();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderEmployee(opts = {}) {
   resolveActiveMenu();
   const open = isMenuOpen();
-  document.getElementById('openState').classList.toggle('hidden', !open);
-  document.getElementById('closedState').classList.toggle('hidden', open);
-  document.getElementById('bottomBar').style.display = open ? 'flex' : 'none';
-
-  const status = document.getElementById('statusPill');
-  const hero = document.querySelector('#employeeView .hero');
-  if (hero) hero.classList.toggle('hero-closed', !open);
-  if (open) {
-    status.className = 'pill status-open';
-    status.textContent = '訂餐開放中';
-    document.getElementById('heroTitle').textContent = '今天中午，想吃點什麼？';
-    document.getElementById('heroDesc').textContent = '挑選喜歡的便當，確認數量後送出。';
-  } else {
-    status.className = 'pill status-closed';
-    status.textContent = '訂餐已關閉';
-    document.getElementById('heroTitle').textContent = '目前無法訂餐';
-    document.getElementById('heroDesc').textContent = '尚未開立菜單，或已超過截止時間。';
-  }
+  const justSaved = !!opts.justSaved;
+  const wasUpdate = !!opts.wasUpdate;
 
   // 權限等級 pill（訂餐頁）
   let rolePill = document.getElementById('rolePill');
@@ -870,7 +969,6 @@ function renderEmployee() {
   rolePill.textContent = '👤 ' + roleLabel(currentUser?.Role);
 
   if (activeMenu) {
-    // 有菜單：Store（空白則顯示 indx）+ 截止時間
     const dead = parseDead(activeMenu.DeadTime);
     document.getElementById('deadlinePill').textContent = dead
       ? '⏰ ' + dead.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -882,7 +980,6 @@ function renderEmployee() {
     document.getElementById('menuIndxPill').style.display = '';
     document.getElementById('deadlinePill').style.display = '';
   } else {
-    // 無菜單：顯示現在時間
     const now = new Date();
     document.getElementById('deadlinePill').textContent =
       '🕐 ' + now.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -893,24 +990,64 @@ function renderEmployee() {
     if (storePill) storePill.style.display = 'none';
   }
 
-  existingOrder = null;
-  cart = {};
-  if (open) {
-    existingOrder = findExistingOrder();
-    const box = document.getElementById('alreadyOrderedBox');
-    if (existingOrder) {
-      cart = parseOrderInfo(existingOrder.Info);
-      box.classList.remove('hidden');
-      document.getElementById('submitOrder').textContent = '修改訂單 →';
-      document.getElementById('cancelOrderBtn').classList.remove('hidden');
-    } else {
-      box.classList.add('hidden');
-      document.getElementById('submitOrder').textContent = '確認送出 →';
-      document.getElementById('cancelOrderBtn').classList.add('hidden');
-    }
-    renderFavorites();
-    renderMenu();
+  const status = document.getElementById('statusPill');
+  const hero = document.querySelector('#employeeView .hero');
+  if (hero) hero.classList.toggle('hero-closed', !open);
+
+  existingOrder = open ? findExistingOrder() : null;
+
+  // 剛送出／更新，或已有訂單且非編輯模式 → 顯示成功畫面
+  const showSuccess = open && existingOrder && (justSaved || !editingOrder);
+
+  document.getElementById('closedState').classList.toggle('hidden', open);
+  document.getElementById('orderSuccessState').classList.toggle('hidden', !showSuccess);
+  document.getElementById('openState').classList.toggle('hidden', !open || showSuccess);
+  document.getElementById('bottomBar').style.display = (open && !showSuccess) ? 'flex' : 'none';
+
+  if (!open) {
+    editingOrder = false;
+    cart = {};
+    status.className = 'pill status-closed';
+    status.textContent = '訂餐已關閉';
+    document.getElementById('heroTitle').textContent = '目前無法訂餐';
+    document.getElementById('heroDesc').textContent = '尚未開立菜單，或已超過截止時間。';
+    return;
   }
+
+  status.className = 'pill status-open';
+  status.textContent = '訂餐開放中';
+
+  if (showSuccess) {
+    document.getElementById('heroTitle').textContent = justSaved ? '訂餐成功！' : '訂單確認';
+    document.getElementById('heroDesc').textContent = justSaved
+      ? '你的訂單已寫入系統，可隨時回來查看或修改。'
+      : '你在此菜單已有訂單，下方為明細。';
+    cart = parseOrderInfo(existingOrder.Info);
+    renderOrderSuccess(existingOrder, { justSaved, isUpdate: wasUpdate });
+    return;
+  }
+
+  // 點餐／修改模式
+  if (existingOrder) {
+    cart = parseOrderInfo(existingOrder.Info);
+    document.getElementById('alreadyOrderedBox').classList.remove('hidden');
+    document.getElementById('submitOrder').textContent = '修改訂單 →';
+    document.getElementById('cancelOrderBtn').classList.remove('hidden');
+    document.getElementById('heroTitle').textContent = editingOrder ? '修改你的訂單' : '今天中午，想吃點什麼？';
+    document.getElementById('heroDesc').textContent = editingOrder
+      ? '調整數量後再次送出，會覆蓋原訂單。'
+      : '挑選喜歡的便當，確認數量後送出。';
+  } else {
+    cart = {};
+    editingOrder = false;
+    document.getElementById('alreadyOrderedBox').classList.add('hidden');
+    document.getElementById('submitOrder').textContent = '確認送出 →';
+    document.getElementById('cancelOrderBtn').classList.add('hidden');
+    document.getElementById('heroTitle').textContent = '今天中午，想吃點什麼？';
+    document.getElementById('heroDesc').textContent = '挑選喜歡的便當，確認數量後送出。';
+  }
+  renderFavorites();
+  renderMenu();
 }
 
 function getFavs() {
@@ -1011,6 +1148,7 @@ async function saveOrder() {
   if (!currentUser || !activeMenu) return;
   const s = cartStats();
   const parts = Object.keys(cart).filter(k => cart[k] > 0).map(k => `${k}×${cart[k]}`);
+  const wasUpdate = !!existingOrder;
   const row = {
     indx: String(activeMenu.indx),
     Name: currentUser.Name,
@@ -1020,13 +1158,15 @@ async function saveOrder() {
     CrearDate: new Date().toISOString()
   };
   document.getElementById('btnSaveOrder').disabled = true;
-  setLoading(true, existingOrder ? '更新 Order…' : '寫入 Order…');
+  setLoading(true, wasUpdate ? '更新 Order…' : '寫入 Order…');
   try {
     const res = await gasPost({ action: 'saveOrder', order: row });
     await loadFromServer();
     closeModal();
-    renderEmployee();
+    editingOrder = false;
+    renderEmployee({ justSaved: true, wasUpdate: !!(res.updated || wasUpdate) });
     toast(res.updated ? '訂單已更新' : '訂單已送出');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (e) {
     toast('送出失敗：' + e.message);
   }
@@ -1050,6 +1190,8 @@ async function cancelOrder() {
     await loadFromServer();
     cart = {};
     existingOrder = null;
+    editingOrder = false;
+    document.getElementById('orderSuccessState').classList.add('hidden');
     renderEmployee();
     toast('已取消訂餐');
   } catch (e) {
@@ -1308,6 +1450,28 @@ async function closeActiveMenu() {
     renderAdmin();
   } catch (e) {
     toast('關閉失敗：' + e.message);
+  }
+  setLoading(false);
+}
+
+/** 提早結算：把截止時間設為現在，停止繼續訂餐，但保留 Menu / Order 資料 */
+async function settleActiveMenu() {
+  if (!activeMenu) { toast('目前無開放菜單'); return; }
+  if (!confirm('確定提早結算 Menu #' + activeMenu.indx + '？\n將立即關閉訂餐，但會保留菜單與所有訂單資料。')) return;
+  setLoading(true, '提早結算中…');
+  try {
+    await gasPost({
+      action: 'settleMenu',
+      indx: String(activeMenu.indx),
+      DeadTime: new Date().toISOString()
+    });
+    await loadFromServer();
+    resolveActiveMenu();
+    toast('已提早結算，訂餐已關閉');
+    renderEmployee();
+    renderAdmin();
+  } catch (e) {
+    toast('結算失敗：' + e.message);
   }
   setLoading(false);
 }
