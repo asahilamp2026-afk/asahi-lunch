@@ -466,7 +466,7 @@ button,input,textarea,select{font:inherit}button{cursor:pointer}
    Favorite    | indx | Info | Price   ← indx = 一組最愛的流水號
    ========================================================= */
 
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzrt-Tn-bx-JxTXhNUQJNyV3UZSYD-awpHgwuwIHZKn6pww4sVsBtahFqQijWxxXMYvoA/exec';
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzGF0RRutKQUGETYWceIDFtGgo0ybiE3wXZGN_4EIJEXLYmAoN3GX_6lJe_wIX45td30A/exec';
 
 const COOKIE_KEY = 'asahi_lamp_cookie';
 const GAS_URL_KEY = 'asahi_gas_url';
@@ -1469,12 +1469,22 @@ function renderPerms() {
     return;
   }
 
+  // 第一個建立的帳號（最小 indx）任何人皆不可從前端刪除
+  const firstIndx = users.reduce((min, u) => {
+    const n = parseInt(u.indx, 10);
+    if (!Number.isFinite(n)) return min;
+    return min === null || n < min ? n : min;
+  }, null);
+
   box.innerHTML = list.map(u => {
     const isSelf = u.Cookie === currentUser?.Cookie;
+    const isFirst = firstIndx !== null && parseInt(u.indx, 10) === firstIndx;
+    const noDelete = isSelf || isFirst;
+    const delTitle = isFirst ? '系統首個帳號，不可刪除' : (isSelf ? '不能刪除自己' : '刪除使用者');
     return `
     <div class="perm-row">
       <div style="min-width:0">
-        <strong>${esc(u.Name)}</strong>
+        <strong>${esc(u.Name)}</strong>${isFirst ? ' <span class="subtle">（首個帳號）</span>' : ''}
         <div class="subtle">${isSelf ? '（你）' : esc(u.Cookie)}</div>
       </div>
       <div class="perm-actions">
@@ -1483,7 +1493,7 @@ function renderPerms() {
           <option value="admin" ${u.Role === 'admin' ? 'selected' : ''}>Admin</option>
           <option value="developer" ${u.Role === 'developer' ? 'selected' : ''}>Developer</option>
         </select>
-        <button class="icon-btn" title="刪除使用者" ${isSelf ? 'disabled' : ''}
+        <button class="icon-btn" title="${delTitle}" ${noDelete ? 'disabled' : ''}
           onclick="deleteUser('${esc(u.Cookie)}', '${esc(u.Name)}')">🗑️</button>
       </div>
     </div>`;
@@ -1516,6 +1526,17 @@ async function deleteUser(cookie, name) {
   }
   if (cookie === currentUser?.Cookie) {
     toast('不能刪除自己');
+    return;
+  }
+  // 保護第一個建立的帳號
+  const first = users.reduce((best, u) => {
+    const n = parseInt(u.indx, 10);
+    if (!Number.isFinite(n)) return best;
+    if (!best || n < parseInt(best.indx, 10)) return u;
+    return best;
+  }, null);
+  if (first && String(first.Cookie) === String(cookie)) {
+    toast('系統首個帳號無法刪除');
     return;
   }
   if (!confirm('確定從系統刪除使用者「' + name + '」？\n只會刪除 User 表資料，不會刪訂單或其他紀錄。')) return;
